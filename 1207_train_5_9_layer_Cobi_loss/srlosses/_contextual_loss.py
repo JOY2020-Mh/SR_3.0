@@ -57,8 +57,8 @@ class Patch_CoBi_Loss(nn.Module):
     def forward(self, output, target):
         assert (type(output) is torch.Tensor)
         assert (type(target) is torch.Tensor)
-        assert (torch.max(output) <=1 & torch.min(output) >=0) # only work for input ~ [0,1]
-        assert (torch.max(target) <=1 & torch.min(target) >=0) # only work for input ~ [0,1]
+        # assert ((torch.max(output) <=1) & (torch.min(output) >=0)) # only work for input ~ [0,1]
+        assert ((torch.max(target) <=1) & (torch.min(target) >=0)) # only work for input ~ [0,1]
         if output.shape[1] != 3:
             output = output.repeat(1, 3, 1, 1) # also work for gray scale
         if target.shape[1] != 3:
@@ -79,4 +79,4 @@ class Patch_CoBi_Loss(nn.Module):
         #TODO cpu and cuda version
         CX_loss_i = CX_loss_helper(output_patch.cuda(), target_patch.cuda(), CX_config=self.CX)
         CX_loss = torch.sum(CX_loss_i)
-        return CX_loss
+        return 1.74+CX_loss

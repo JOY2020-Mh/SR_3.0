@@ -10,7 +10,8 @@ And the result is the upscaled 4 images.
 is_train = False;
 scale_factor = 4
 Model_index = 1  
-pretrained_model = 'lr_0.001_x4_Net_epoch_757.pkl'
+pretrained_model = 'lr_0.0001_x4_FSRCNN_epoch_24.pkl'
+#pretrained_model = 'fsrcnn_x4.pth'
 
 print ('scale_factor = %d' %scale_factor)
 
@@ -34,6 +35,7 @@ from os.path import join
 from PIL import Image
 import random
 import glob
+import imageio
 
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in [".png", ".jpg", ".jpeg", ".bmp"])
@@ -42,7 +44,7 @@ def is_image_file(filename):
 def parse_args():
     desc = "PyTorch implementation of S R collections"
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('--img_save_dir', type=str, default='1208_FSRCNN_test_lj_epoch_757', help='Directory name to save validation pictures')
+    parser.add_argument('--img_save_dir', type=str, default='1208_FSRCNN_test_epoch_24_Cobi_loss', help='Directory name to save validation pictures')
     parser.add_argument('--pretrained_model', type=str, default= pretrained_model, help='pretrained model')
     parser.add_argument('--test_dataset', type = str, default = 'lj_test_images')
     return check_args(parser.parse_args())
@@ -64,33 +66,51 @@ def main():
         exit()
 
     model = FSRCNN(scale_factor=4, num_channels=1,  d=56, s=12, m=4)
+    print("model")
+    a = model.state_dict()
+    print(a.keys())
+    # print(model.state_dict())
     state_dict = torch.load(pretrained_model, map_location = torch.device('cpu'))
+    print("state_dict")
+    #print(state_dict.keys())
 
-    print(state_dict.keys())
-    model.load_state_dict(state_dict)
+    # original saved file with DataParallel
+    # create new OrderedDict that does not contain `module.`
+    # from collections import OrderedDict
+    # new_state_dict = OrderedDict()
+    # for k, v in state_dict.items():
+    #     print(k)
+    #     name = k[7:] # remove `module.`
+    #     new_state_dict[name] = v
+    #     # load params
+    # model.load_state_dict(new_state_dict)   
+
+    # print(new_state_dict.keys())
+    # model.load_state_dict(state_dict)
+
+    # print(model)
+
+    pretrained_state_dict = state_dict
+    pretrained_state_dict_keys = list(pretrained_state_dict.keys())
+    print(pretrained_state_dict.keys())
+    net_model_state_dict = model.state_dict()
+    #print(net_model_state_dict)
+    net_model_state_dict_keys = list(net_model_state_dict.keys())
+    #print("pretrain keys: ", len(pretrained_state_dict_keys))
+    #print("netmodel keys: ", len(net_model_state_dict_keys))
+
+    weight_load = {}
+    for k in range(len(pretrained_state_dict_keys)):
+         if pretrained_state_dict[pretrained_state_dict_keys[k]].shape == net_model_state_dict[net_model_state_dict_keys[k]].shape:
+             weight_load[net_model_state_dict_keys[k]] = pretrained_state_dict[pretrained_state_dict_keys[k]]
+             #print('init model', net_model_state_dict_keys[k], 'from pretrained', pretrained_state_dict_keys[k])
+         else:
+            break
+        
+    net_model_state_dict.update(weight_load)
+    model.load_state_dict(net_model_state_dict)
 
     print(model)
-
-    # pretrained_state_dict = state_dict
-    # pretrained_state_dict_keys = list(pretrained_state_dict.keys())
-    # net_model_state_dict = model.state_dict()
-    # net_model_state_dict_keys = list(net_model_state_dict.keys())
-    # #print("pretrain keys: ", len(pretrained_state_dict_keys))
-    # #print("netmodel keys: ", len(net_model_state_dict_keys))
-
-    # weight_load = {}
-    # for k in range(len(pretrained_state_dict_keys)):
-
-    #     if pretrained_state_dict[pretrained_state_dict_keys[k]].shape == net_model_state_dict[net_model_state_dict_keys[k]].shape:
-    #         weight_load[net_model_state_dict_keys[k]] = pretrained_state_dict[pretrained_state_dict_keys[k]]
-    #         #print('init model', net_model_state_dict_keys[k],
-    #         #    'from pretrained', pretrained_state_dict_keys[k])
-    #     else:
-    #         break
-    #     #print("init len is:", len(weight_load))
-    #     net_model_state_dict.update(weight_load)
-    #     model.load_state_dict(net_model_state_dict)
-
 
     image_dir = args.test_dataset
     image_filenames = [join(image_dir, x) for x in sorted(listdir(image_dir)) if is_image_file(x)]
@@ -125,11 +145,12 @@ def main():
 
         if not os.path.exists(image_dir):
             os.mkdir(image_dir, mode=0o777)
-        
-        save_path = join(image_dir, str(idx)+'_SR_x_1105'+'_' + str(4)+'.png')
-        scipy.misc.imsave(save_path, result)
-        idx += 1
 
+    
+        save_path = join(image_dir, str(idx)+'_SR' + '.png')
+        imageio.imsave(save_path, result)
+        #scipy.misc.imsave(save_path, result)
+        idx += 1
         #print(idx)
 
     # save entire model

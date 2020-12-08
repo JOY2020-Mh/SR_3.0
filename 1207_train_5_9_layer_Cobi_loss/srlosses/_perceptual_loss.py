@@ -8,7 +8,7 @@ except:
 
 class Perceptual_Loss(nn.Module):
 
-    def __init__(self, backbone='vgg', pool='max'):
+    def __init__(self, backbone='vgg19', pool='max'):
         super(Perceptual_Loss, self).__init__()
         self.compute_l1_loss = torch.nn.L1Loss()
         self.feature_extractor = getattr(cnn_backbone, backbone + '_extractor')(pool=pool)

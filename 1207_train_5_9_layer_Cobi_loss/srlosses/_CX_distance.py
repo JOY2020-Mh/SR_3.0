@@ -109,9 +109,10 @@ class CSFlow:
             T_features_i = T_features[i, :, :, :].unsqueeze_(0)  # 1HWC --> 1CHW
             I_features_i = I_features[i, :, :, :].unsqueeze_(0).permute((0, 3, 1, 2))
             patches_PC11_i = cs_flow.patch_decomposition(T_features_i)  # 1HWC --> PC11, with P=H*W
-            cosine_dist_i = torch.nn.functional.conv2d(I_features_i, patches_PC11_i)
+            cosine_dist_i = torch.nn.functional.conv2d(I_features_i.clone(), patches_PC11_i.clone())
             cosine_dist_1HWC = cosine_dist_i.permute((0, 2, 3, 1))
-            cosine_dist_l.append(cosine_dist_i.permute((0, 2, 3, 1)))  # back to 1HWC
+            cosine_dist_l.append(cosine_dist_1HWC)  # back to 1HWC
+            # cosine_dist_l.append(cosine_dist_1HWC)
 
         cs_flow.cosine_dist = torch.cat(cosine_dist_l, dim=0)
 
